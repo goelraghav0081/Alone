@@ -29,6 +29,7 @@ export const signup = async (req: Request, res: Response) => {
 
     // 5. Respond (never return password)
     return res.status(201).json({
+      name: user.name,
       message: "User registered successfully",
       userId: user._id,
     });
@@ -37,3 +38,38 @@ export const signup = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const login = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // 4. Return success response
+    return res.status(200).json({
+      message: "Login successful",
+      user: {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+      },
+      redirectUrl: "/dashboard",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
