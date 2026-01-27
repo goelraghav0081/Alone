@@ -1,12 +1,15 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import User from "../models/user.model";
+
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt.utils";
 import { AuthRequest } from "../middleware/auth.middleware";
+
+import { hashToken } from "../utils/tokenHash";
 
 export const signup = async (req: Request, res: Response) => {
   try {
@@ -51,7 +54,9 @@ export const login = async (req: Request, res: Response) => {
 
     // 1. Validate input
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
     }
 
     // 2. Find user
@@ -75,6 +80,22 @@ export const login = async (req: Request, res: Response) => {
     const refreshToken = generateRefreshToken({
       userId: user._id.toString(),
       email: user.email,
+    });
+
+    // ✅ STORE refresh token in DB (HASHED)
+    user.refreshToken = hashToken(refreshToken);
+    user.refreshTokenExpiresAt = new Date(
+      Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
+    );
+    await user.save();
+
+    // ✅ SEND refresh token via HTTP-only cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/auth/refresh",
     });
 
     // 5. Return success response with tokens

@@ -4,6 +4,8 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  refreshToken?: string | null;
+  refreshTokenExpiresAt?: Date | null;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -23,8 +25,17 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: true,
     },
+    refreshToken: {
+      type: String,
+      default: null,
+    },
+
+    refreshTokenExpiresAt: {
+      type: Date,
+      default: null,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model<IUser>("User", UserSchema);
